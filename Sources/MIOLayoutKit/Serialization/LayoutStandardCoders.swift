@@ -288,6 +288,14 @@ enum LayoutStandardCoders {
         return dict
     }
 
+    /// Row-level style keys a provider may expose alongside column values.
+    static func addRow ( _ table: Table, _ handle: LayoutDecoder.RowHandle, _ columns: [ColumnSpec] ) {
+        table.addRow( rowDict( handle, columns )
+                    , bold: handle.text( "_bold", nil ) == "true"
+                    , italic: handle.text( "_italic", nil ) == "true"
+                    , textColor: handle.text( "_color", nil ) )
+    }
+
     static func addSectionTitle ( _ table: Table, _ title: String, columnCount: Int, fgColor: String? ) {
         let row = HStack<LayoutItem>()
         let text = Text( title, bold: true )
@@ -306,7 +314,7 @@ enum LayoutStandardCoders {
 
             if let rows_path = node.stringIfPresent( "rows" ) {
                 for handle in decoder.rows( at: rows_path, probeKeys: keys ) {
-                    table.addRow( rowDict( handle, columns ) )
+                    addRow( table, handle, columns )
                 }
             }
 
@@ -421,10 +429,12 @@ enum LayoutStandardCoders {
             if let sections = provider.items( forPath: sections_path ) {
                 for section in sections {
                     let title = section.text( forPath: "title", hint: nil ) ?? ""
-                    addSectionTitle( table, title, columnCount: columns.count, fgColor: node.stringIfPresent( "sectionTitleColor" ) )
+                    if !title.isEmpty {
+                        addSectionTitle( table, title, columnCount: columns.count, fgColor: node.stringIfPresent( "sectionTitleColor" ) )
+                    }
 
                     for handle in decoder.rows( at: "rows", probeKeys: keys, provider: section ) {
-                        table.addRow( rowDict( handle, columns ) )
+                        addRow( table, handle, columns )
                     }
 
                     addFooter { key in section.text( forPath: "footer.\(key)", hint: nil ) }
@@ -449,7 +459,9 @@ enum LayoutStandardCoders {
                 for section in 0 ..< section_count! {
                     let base = "\(sections_path).\(section)"
                     let title = provider.text( forPath: "\(base).title", hint: nil ) ?? ""
-                    addSectionTitle( table, title, columnCount: columns.count, fgColor: node.stringIfPresent( "sectionTitleColor" ) )
+                    if !title.isEmpty {
+                        addSectionTitle( table, title, columnCount: columns.count, fgColor: node.stringIfPresent( "sectionTitleColor" ) )
+                    }
 
                     guard let row_count = provider.count( forPath: "\(base).rows" ) else {
                         decoder.recordIssue( "sectionedTable: missing count for '\(base).rows' in flat mode" )
@@ -457,13 +469,9 @@ enum LayoutStandardCoders {
                     }
 
                     for _ in 0 ..< row_count {
-                        var dict: [String:Any] = [:]
-                        for col in columns {
-                            if let value = provider.text( forPath: "\(rows_path).\(row_index).\(col.key)", hint: col.hint ) {
-                                dict[ col.key ] = value
-                            }
-                        }
-                        table.addRow( dict )
+                        let handle = LayoutDecoder.flatHandle( base: "\(rows_path).\(row_index)", provider: provider
+                                                             , maxProbedRows: decoder.maxProbedRows )
+                        addRow( table, handle, columns )
                         row_index += 1
                     }
 
