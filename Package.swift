@@ -32,6 +32,9 @@ let package = Package(
         ),
         .testTarget(
             name: "MIOLayoutKitTests",
-            dependencies: ["MIOLayoutKit"]),
+            dependencies: ["MIOLayoutKit"],
+            linkerSettings: [
+                .linkedFramework( "SystemConfiguration", .when( platforms: [.macOS] ) )
+            ]),
     ]
 )
