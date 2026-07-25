@@ -5,15 +5,15 @@ import PackageDescription
 
 
 let package = Package(
-    name: "MIOReportKit-Swift",
+    name: "MIOLayoutKit",
     platforms: [
         .macOS(.v12), .iOS( .v12 )
     ],
     products: [
         // Products define the executables and libraries a package produces, and make them visible to other packages.
         .library(
-            name: "MIOReportKit-Swift",
-            targets: ["MIOReportKit-Swift"]),
+            name: "MIOLayoutKit",
+            targets: ["MIOLayoutKit"]),
     ],
     dependencies: [
         .package( url: "https://github.com/miolabs/MIOCore.git", branch: "master" ),
@@ -23,7 +23,7 @@ let package = Package(
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
         // Targets can depend on other targets in this package, and on products in packages this package depends on.
         .target(
-            name: "MIOReportKit-Swift",
+            name: "MIOLayoutKit",
             dependencies: [
                 .product(name: "MIOCore", package: "MIOCore" ),
                 .product(name: "PDFLib-Swift", package: "PDFLib-Swift", condition: .when( platforms: [.macOS, .linux] ) )
@@ -31,7 +31,7 @@ let package = Package(
 //            swiftSettings: [.define( "PDFLIB_7" )]
         ),
         .testTarget(
-            name: "MIOReportKit-SwiftTests",
-            dependencies: ["MIOReportKit-Swift"]),
+            name: "MIOLayoutKitTests",
+            dependencies: ["MIOLayoutKit"]),
     ]
 )

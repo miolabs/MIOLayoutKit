@@ -1,7 +1,7 @@
     import XCTest
-    @testable import MIOReportKit_Swift
+    @testable import MIOLayoutKit
 
-    final class MIOReportKit_SwiftTests: XCTestCase {
+    final class MIOLayoutKitTests: XCTestCase {
         func testText ( ) throws {
             let page = A4( )
             let text = Text( "Hello World", id: "ID1" )
@@ -108,7 +108,7 @@
         func testImage ( ) throws {
             let render = HTMLRender( )
             let page   = A4( )
-            let img    = Image( url: "dual-link.com/img.jpg", width: 200, height: 100 )
+            let img    = URLImage( url: "dual-link.com/img.jpg", width: 200, height: 100 )
             let container = Container( )
             let layout = Layout( page )
             
@@ -343,7 +343,7 @@ Hello                              World
             let layout = Layout( page )
 
             row.add( LayoutItem( 1 ) )
-            row.add( Image( url: "Hello", width: 20, height: 3 ) )
+            row.add( URLImage( url: "Hello", width: 20, height: 3 ) )
             row.add( LayoutItem( 1 ) )
             page.add( row )
             
@@ -396,7 +396,7 @@ Hello                              World
         let page   = Page( Size( width: 40, height: 0 ) )
         let row    = HStack( 1 )
         let layout = Layout( page )
-        let table  = Table( flex: 1 )
+        let table  = Table( 1 )
         
         table.addColumn( "population", "Population", flex: 1, align: TextAlign.right )
         table.addColumn( "country", "Country", align: TextAlign.left )
