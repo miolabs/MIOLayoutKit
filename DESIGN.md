@@ -218,27 +218,34 @@ protocol below avoids the name collision.
 
 ```swift
 public final class LayoutEncoder {
-    public func encode(_ page: Page) throws -> Data
+    public init(registry: LayoutNodeRegistry = .standard)
+    public func encode(_ page: Page, documentType: String? = nil, name: String? = nil) throws -> Data
+    public func encodeItem(_ item: LayoutItem) throws -> LayoutNode
 }
 
 public final class LayoutDecoder {
     public init(registry: LayoutNodeRegistry = .standard,
-                fragments: LayoutFragmentLibrary = .builtIn)
-    public func decode(_ data: Data, provider: LayoutDataProvider) throws -> Page
-    public func decode(_ data: Data) throws -> Page   // static templates / validation walk
+                fragments: LayoutFragmentLibrary = .standard)
+    public func decode(_ data: Data, provider: LayoutDataProvider? = nil) throws -> Page
+    public func decodeItem(_ node: LayoutNode) throws -> LayoutItem?  // nil = hidden by visibleIf
+    public private(set) var issues: [String]  // unresolved paths etc., for validate flows
 }
 
-public protocol LayoutNodeCodable {        // adopted by Text, VStack, Table, ...
-    static var nodeType: String { get }
-    func encode(to node: inout LayoutNode, encoder: LayoutEncoder) throws
-    static func decode(from node: LayoutNode, decoder: LayoutDecoder) throws -> LayoutItem
+// One entry per node type; decode looked up by nodeType, encode matchers run
+// in order (subclasses registered before parents). Closure-based instead of a
+// protocol so class hierarchies (LocalizedText: Text, Padding: VStack) can't
+// accidentally inherit the wrong coder.
+public struct LayoutNodeCoder {
+    public init(nodeType: String,
+                decode: @escaping (LayoutNode, LayoutDecoder) throws -> LayoutItem,
+                encode: ((LayoutItem, LayoutEncoder) throws -> LayoutNode?)? = nil)
 }
 
 public protocol LayoutTemplateStore {
-    func save(_ desc: LayoutTemplateDescriptor, body: Data) throws
-    func load(key: String, language: String?, documentType: String?) throws -> Data
+    func save(_ descriptor: LayoutTemplateDescriptor, body: Data) throws
+    func load(key: String, language: String?) throws -> Data
     func list(documentType: String?) throws -> [LayoutTemplateDescriptor]
-    func delete(key: String) throws
+    func delete(key: String, language: String?) throws
 }
 ```
 
