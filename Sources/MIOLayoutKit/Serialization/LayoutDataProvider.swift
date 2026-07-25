@@ -94,7 +94,9 @@ public final class DictionaryDataProvider: LayoutDataProvider {
     public func bool ( forPath path: String ) -> Bool {
         guard let v = value( forPath: path ) else { return false }
         if let b = v as? Bool   { return b }
-        if let s = v as? String { return s == "true" || s == "1" }
+        // Presence semantics: visibleIf on a text path shows the node when
+        // there is something to show.
+        if let s = v as? String { return !s.isEmpty && s != "false" && s != "0" }
         if let n = v as? Int    { return n != 0 }
         return true
     }
