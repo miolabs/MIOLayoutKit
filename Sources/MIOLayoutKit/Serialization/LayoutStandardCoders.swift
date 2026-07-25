@@ -261,7 +261,7 @@ enum LayoutStandardCoders {
         }
     }
 
-    static func makeTable ( _ node: LayoutNode, _ columns: [ColumnSpec] ) -> Table {
+    static func makeTable ( _ node: LayoutNode, _ columns: [ColumnSpec] ) throws -> Table {
         let table = Table()
         table.border = node.bool( "border", default: true )
 
@@ -269,6 +269,14 @@ enum LayoutStandardCoders {
             table.addColumn( col.key, col.title, flex: col.flex, textSize: col.textSize
                            , bold: col.bold, align: col.align, wrap: col.wrap, fgColor: col.fgColor )
         }
+
+        if let style_obj = node.objectIfPresent( "headerStyle" ) {
+            try LayoutStyleCoding.decode( style_obj, into: table.header!.style, nodeType: node.type )
+        }
+        if let style_obj = node.objectIfPresent( "footerStyle" ) {
+            try LayoutStyleCoding.decode( style_obj, into: table.footer!.style, nodeType: node.type )
+        }
+
         return table
     }
 
@@ -280,9 +288,11 @@ enum LayoutStandardCoders {
         return dict
     }
 
-    static func addSectionTitle ( _ table: Table, _ title: String, columnCount: Int ) {
+    static func addSectionTitle ( _ table: Table, _ title: String, columnCount: Int, fgColor: String? ) {
         let row = HStack<LayoutItem>()
-        row.add( Text( title, bold: true ) )
+        let text = Text( title, bold: true )
+        if let color = fgColor { _ = text.foregroundColor( color ) }
+        row.add( text )
         for _ in 1 ..< max( 1, columnCount ) { row.add( Text( "" ) ) }
         table.addRow( row )
     }
@@ -291,7 +301,7 @@ enum LayoutStandardCoders {
         nodeType: "table",
         decode: { node, decoder in
             let columns = try columnSpecs( node )
-            let table = makeTable( node, columns )
+            let table = try makeTable( node, columns )
             let keys = columns.map { $0.key }
 
             if let rows_path = node.stringIfPresent( "rows" ) {
@@ -391,7 +401,7 @@ enum LayoutStandardCoders {
         nodeType: "sectionedTable",
         decode: { node, decoder in
             let columns = try columnSpecs( node )
-            let table = makeTable( node, columns )
+            let table = try makeTable( node, columns )
             let keys = columns.map { $0.key }
             let sections_path = try node.string( "sections" )
 
@@ -411,7 +421,7 @@ enum LayoutStandardCoders {
             if let sections = provider.items( forPath: sections_path ) {
                 for section in sections {
                     let title = section.text( forPath: "title", hint: nil ) ?? ""
-                    addSectionTitle( table, title, columnCount: columns.count )
+                    addSectionTitle( table, title, columnCount: columns.count, fgColor: node.stringIfPresent( "sectionTitleColor" ) )
 
                     for handle in decoder.rows( at: "rows", probeKeys: keys, provider: section ) {
                         table.addRow( rowDict( handle, columns ) )
@@ -439,7 +449,7 @@ enum LayoutStandardCoders {
                 for section in 0 ..< section_count! {
                     let base = "\(sections_path).\(section)"
                     let title = provider.text( forPath: "\(base).title", hint: nil ) ?? ""
-                    addSectionTitle( table, title, columnCount: columns.count )
+                    addSectionTitle( table, title, columnCount: columns.count, fgColor: node.stringIfPresent( "sectionTitleColor" ) )
 
                     guard let row_count = provider.count( forPath: "\(base).rows" ) else {
                         decoder.recordIssue( "sectionedTable: missing count for '\(base).rows' in flat mode" )
