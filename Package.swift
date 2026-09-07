@@ -16,7 +16,7 @@ let package = Package(
             targets: ["MIOLayoutKit"]),
     ],
     dependencies: [
-        .package( url: "https://github.com/miolabs/MIOCore.git", branch: "master" ),
+        .package( url: "https://github.com/miolabs/MIOCore.git", from: "2.0.0" ),
         .package( url: "https://github.com/miolabs/PDFLib-Swift.git", branch: "main" )
     ],
     targets: [
