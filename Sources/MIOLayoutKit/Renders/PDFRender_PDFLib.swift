@@ -62,7 +62,7 @@ public class PDFRender_PDFLib: RenderContext
         defaultFontItalic = (try? pdf.loadFont(name: "FreeSansOblique" ) ) ?? -1
         defaultFontBoldItalic = (try? pdf.loadFont(name: "FreeSansBoldOblique" ) ) ?? -1
         if defaultFont == -1 || defaultFontBold == -1 || defaultFontItalic == -1 || defaultFontBoldItalic == -1 {
-            print("MIOReportKit: Error. cant find fonts. Using default one")
+            print("MIOLayoutKit: Error. cant find fonts. Using default one")
         }
         #else
         defaultFont = (try? pdf.loadFont(name: "Helvetica" ) ) ?? -1
@@ -315,42 +315,25 @@ public class PDFRender_PDFLib: RenderContext
                                       , options: opts.joined(separator: " "))
             }
         }
-        else if let img = item as? URLImage {
-            var data = cachedImagesData[img.url]
-            if data == nil
-            {
-                let r = URLRequest( urlString: img.url )
-                data = try? MIOCoreURLDataRequest_sync( r )
-                print("*** URL Image retrieve data from url: \(img.url)")
-                cachedImagesData[img.url] = data
+        else if let img = item as? Image {
+            var data:Data? = img.data
+            var fn:String = UUID().uuidString
+            if let ui = img as? URLImage {
+                data = cachedImagesData[ui.url]
+                if data == nil {
+                    let r = URLRequest( urlString: ui.url )
+                    data = try? MIOCoreURLDataRequest_sync( r )
+                    print("*** URL Image retrieve data from url: \(ui.url)")
+                    cachedImagesData[ui.url] = data
+                    fn = String( ui.url.split( separator: "/" ).last! )//.components( separatedBy: "." ).first!
+                }
             }
             
             if data != nil
             {
-             
-                let fn = String( img.url.split( separator: "/" ).last! )//.components( separatedBy: "." ).first!
-             
-                // WORKAROUND: Save the file in a temp folder a load. It's a bug in Linux
-//                do {
-//                    try data!.write(to: URL(fileURLWithPath: "/tmp/\(fn)"))
-//                }
-//                catch {
-//                    print("*** URL Image write temp file error: \(error)")
-//                    return
-//                }
-                // WORKAROUND
-                
                 let path = "/pvf/image/" + fn
                 pdf.createPVF( filename: path, data: data! )
                 print("*** URL Image create pvf PDFLIB: \(path) (\(data!.count))")
-                let hex_data = data!.map {
-                    if $0 < 16 {
-                        return "0" + String($0, radix: 16)
-                    } else {
-                        return String($0, radix: 16)
-                    }
-                }.joined()
-                print( "*** URL Image hex data: \(hex_data)" )
                 do {
                     let image = try pdf.loadImage(fileName: path )
                     print("*** URL Image load image PDFLIB: \(path)")

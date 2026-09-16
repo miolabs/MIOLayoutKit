@@ -16,11 +16,11 @@ public enum ImageAlign: Int {
 
 
 public class Image: LayoutItem {
-    public var data: Data
+    public var data: Data?
     public var imgSize: Size
     public var align: ImageAlign = .center
     
-    public init ( data: Data, width: Float, height: Float, flex: Int = 0, id: String? = nil ) {
+    public init ( data: Data?, width: Float, height: Float, flex: Int = 0, id: String? = nil ) {
         self.data = data
         self.imgSize = Size( width: width, height: height )
         super.init( flex, id)
@@ -66,31 +66,17 @@ public class Image: LayoutItem {
 }
 
 
-public class URLImage: LayoutItem {
+public class URLImage: Image {
     public var url: String
-    public var imgSize: Size
-    public var align: ImageAlign = .right
     
     public init ( url: String, width: Float, height: Float, flex: Int = 0, id: String? = nil ) {
         self.url = url
-        self.imgSize = Size( width: width, height: height )
-        super.init( )
-        self.flex = flex
-        self.id = id
+        super.init( data: nil, width: width, height: height, flex: flex, id: id )
     }
     
-    public func align ( _ value: ImageAlign ) -> Self {
-        align = value
-        return self
-    }
-    
-    override open func meassure ( _ context: RenderContext ) {
-        size = self.imgSize
-    }
-    
-    override func setDimension ( _ dim: Size ) {
-        dimensions = dim
-    }
+//    override func setDimension ( _ dim: Size ) {
+//        dimensions = dim
+//    }
     
     override func setValue ( _ value: Any ) throws {
         if let new_url = value as? String {

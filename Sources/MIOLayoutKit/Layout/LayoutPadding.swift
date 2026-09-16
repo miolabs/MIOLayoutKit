@@ -30,7 +30,7 @@ public class Padding: VStack<LayoutItem> {
 
         add( hstack )
         
-        if bottom.rawValue > 0 { add( Space( top ) ) }
+        if bottom.rawValue > 0 { add( Space( bottom ) ) }
     }
     
     override open func clone ( ) -> Padding {
