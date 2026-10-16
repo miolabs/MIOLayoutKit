@@ -14,7 +14,10 @@ public enum SizeGrowDirection: Int16 {
 }
 
 
-@objc public enum ItemSize: Int {
+#if canImport(ObjectiveC)
+@objc
+#endif
+public enum ItemSize: Int {
     case none = 0
     case xxs  = 1
     case xs   = 2
