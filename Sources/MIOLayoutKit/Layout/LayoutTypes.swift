@@ -185,7 +185,7 @@ open class RenderContext {
     var x: Float
     var y: Float
     var contraintStack: [Constraint]
-    var containerStack: [Container<LayoutItem>]
+    var containerStack: [LayoutItem]
     var translations: [String:String]
     var currentPageNumber: Int
     var currentPage: Page?
@@ -211,11 +211,11 @@ open class RenderContext {
     
     open func renderItem ( _ item: LayoutItem ) { }
     
-    open func beginContainer ( _ container: Container<LayoutItem> ) {
+    open func beginContainer ( _ container: LayoutItem ) {
         containerStack.append( container )
     }
     
-    open func endContainer ( _ container: Container<LayoutItem> ) {
+    open func endContainer ( _ container: LayoutItem ) {
         _ = containerStack.popLast()
     }
     
@@ -269,9 +269,8 @@ open class RenderContext {
     } }
     
     open func stringCurrency ( from value: NSDecimalNumber? ) -> String {
-        let number = NSNumber( floatLiteral: value?.doubleValue ?? 0 )
-//        return currencyFromatter.string(from: number)!.trimmingCharacters(in: .whitespacesAndNewlines) + " €" //+ currencyFromatter.currencySymbol!
-        return currencyFromatter.string(from: number)!
+        // Format the decimal itself: going through Double loses cents on large amounts
+        return currencyFromatter.string( from: value ?? NSDecimalNumber.zero ) ?? ""
     }
     
     open func stringCurrency ( from value: Decimal? ) -> String {

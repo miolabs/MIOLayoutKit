@@ -75,9 +75,11 @@ public class Container< E: LayoutItem >: LayoutItem {
     }
     
     override func render ( _ context: RenderContext ) {
-        context.beginContainer( self as! Container<LayoutItem>)
+        // Passed as LayoutItem: a Container<Text> is not a Container<LayoutItem> (generic
+        // classes are invariant), so the old forced cast crashed for typed containers.
+        context.beginContainer( self )
           for c in children { c.render( context ) }
-        context.endContainer( self as! Container<LayoutItem> )
+        context.endContainer( self )
     }
     
     open func translate_container ( _ translations: [String: String] ) {

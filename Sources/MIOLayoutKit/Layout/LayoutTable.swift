@@ -105,6 +105,9 @@ public class Table: FooterHeaderContainer< HStack<Text>, HStack<Text> > {
     
     override open func meassure ( _ context: RenderContext ) {
         var sz = Size( )
+        // measured again on every render (and for pagination): start from scratch
+        max_col = []
+        max_row = []
         
         header!.meassure( context )
         footer!.meassure( context )
