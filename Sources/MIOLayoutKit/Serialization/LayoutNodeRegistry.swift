@@ -14,14 +14,14 @@ import Foundation
 /// Encoder/decoder pair for one node type. Decode is looked up by `nodeType`;
 /// encode candidates are tried in registration order (most specific first)
 /// and return nil for items they don't handle.
-public struct LayoutNodeCoder {
+public struct LayoutNodeCoder: Sendable {
     public let nodeType: String
-    public let decode: ( LayoutNode, LayoutDecoder ) throws -> LayoutItem
-    public let encode: ( ( LayoutItem, LayoutEncoder ) throws -> LayoutNode? )?
+    public let decode: @Sendable ( LayoutNode, LayoutDecoder ) throws -> LayoutItem
+    public let encode: ( @Sendable ( LayoutItem, LayoutEncoder ) throws -> LayoutNode? )?
 
     public init ( nodeType: String
-                , decode: @escaping ( LayoutNode, LayoutDecoder ) throws -> LayoutItem
-                , encode: ( ( LayoutItem, LayoutEncoder ) throws -> LayoutNode? )? = nil ) {
+                , decode: @escaping @Sendable ( LayoutNode, LayoutDecoder ) throws -> LayoutItem
+                , encode: ( @Sendable ( LayoutItem, LayoutEncoder ) throws -> LayoutNode? )? = nil ) {
         self.nodeType = nodeType
         self.decode = decode
         self.encode = encode
@@ -29,12 +29,17 @@ public struct LayoutNodeCoder {
 }
 
 
-public final class LayoutNodeRegistry {
+/// Shared by every render (the server renders in parallel): all access goes through `lock`.
+public final class LayoutNodeRegistry: @unchecked Sendable {
 
     public static let standard = LayoutNodeRegistry( standardCoders: true )
 
-    var decoders: [String:LayoutNodeCoder] = [:]
-    var encodeOrder: [LayoutNodeCoder] = []
+    private let lock = NSLock( )
+    private var _decoders: [String:LayoutNodeCoder] = [:]
+    private var _encodeOrder: [LayoutNodeCoder] = []
+
+    /// Snapshot of the encode matchers, most specific first.
+    var encodeOrder: [LayoutNodeCoder] { lock.withLock { _encodeOrder } }
 
     public init ( standardCoders: Bool = true ) {
         if standardCoders {
@@ -45,15 +50,17 @@ public final class LayoutNodeRegistry {
     /// Registers a coder. Custom coders are prepended so their encode matcher
     /// runs before the standard ones (subclass coders must win).
     public func register ( _ coder: LayoutNodeCoder, prepend: Bool = true ) {
-        decoders[ coder.nodeType ] = coder
-        if coder.encode != nil {
-            if prepend { encodeOrder.insert( coder, at: 0 ) }
-            else       { encodeOrder.append( coder ) }
+        lock.withLock {
+            _decoders[ coder.nodeType ] = coder
+            if coder.encode != nil {
+                if prepend { _encodeOrder.insert( coder, at: 0 ) }
+                else       { _encodeOrder.append( coder ) }
+            }
         }
     }
 
     public func decoder ( for nodeType: String ) -> LayoutNodeCoder? {
-        decoders[ nodeType ]
+        lock.withLock { _decoders[ nodeType ] }
     }
 }
 
@@ -61,16 +68,17 @@ public final class LayoutNodeRegistry {
 /// Named, reusable layout fragments referenced from templates with
 /// `"ref": "<name>"`. Register shared blocks (company header, legal entity
 /// block, ...) once and reference them from every template.
-public final class LayoutFragmentLibrary {
+public final class LayoutFragmentLibrary: @unchecked Sendable {
 
     public static let standard = LayoutFragmentLibrary()
 
-    var fragments: [String:LayoutNode] = [:]
+    private let lock = NSLock( )
+    private var fragments: [String:LayoutNode] = [:]
 
     public init ( ) { }
 
     public func register ( _ name: String, node: LayoutNode ) {
-        fragments[ name ] = node
+        lock.withLock { fragments[ name ] = node }
     }
 
     public func register ( _ name: String, json: Data ) throws {
@@ -79,6 +87,6 @@ public final class LayoutFragmentLibrary {
     }
 
     public func fragment ( _ name: String ) -> LayoutNode? {
-        fragments[ name ]
+        lock.withLock { fragments[ name ] }
     }
 }

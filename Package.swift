@@ -55,7 +55,5 @@ let package = Package(
             linkerSettings: [
                 .linkedFramework( "SystemConfiguration", .when( platforms: [.macOS] ) )
             ]),
-    ],
-    // Swift 6 strict concurrency (shared registries, static sizes) is handled in a later step
-    swiftLanguageModes: [.v5]
+    ]
 )

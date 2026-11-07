@@ -160,6 +160,22 @@ final class LayoutDefectTests: XCTestCase {
         XCTAssertTrue(out.contains(">right</div>"), out)
     }
 
+    // MARK: 10. Shared registries are safe to use from parallel renders
+
+    func test_registries_concurrentRegisterAndLookup() {
+        let library = LayoutFragmentLibrary()
+        let registry = LayoutNodeRegistry(standardCoders: true)
+        DispatchQueue.concurrentPerform(iterations: 2_000) { i in
+            library.register("f\(i % 50)", node: LayoutNode(type: "space"))
+            _ = library.fragment("f\(i % 50)")
+            registry.register(LayoutNodeCoder(nodeType: "test.n\(i % 20)", decode: { _, _ in LayoutItem() }))
+            _ = registry.decoder(for: "text")
+            _ = registry.encodeOrder.count
+        }
+        XCTAssertNotNil(library.fragment("f49"))
+        XCTAssertNotNil(registry.decoder(for: "test.n19"))
+    }
+
     // MARK: 8. Currency keeps Decimal precision
 
     func test_stringCurrency_keepsDecimalPrecision() {

@@ -55,7 +55,7 @@ public func should_include ( _ pageNumber: Int, _ inc: IncludeInPage ) -> Bool {
 }
 
 
-public struct Size {
+public struct Size: Sendable {
     package var width : Float = 0
     package var height: Float = 0
     
@@ -173,7 +173,7 @@ public enum FormatterType {
     case time
 }
 
-public struct Vector2D {
+public struct Vector2D: Sendable {
     var x: Float
     var y: Float
 
