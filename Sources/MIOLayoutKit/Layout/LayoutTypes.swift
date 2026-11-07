@@ -56,8 +56,8 @@ public func should_include ( _ pageNumber: Int, _ inc: IncludeInPage ) -> Bool {
 
 
 public struct Size {
-    var width : Float = 0
-    var height: Float = 0
+    package var width : Float = 0
+    package var height: Float = 0
     
     public init( width: Float = 0, height: Float = 0 ) {
         self.width  = width
@@ -176,19 +176,24 @@ public enum FormatterType {
 public struct Vector2D {
     var x: Float
     var y: Float
+
+    package init ( x: Float, y: Float ) {
+        self.x = x
+        self.y = y
+    }
 }
 
 open class RenderContext {
     var fgColor: String
     var bgColor: String
     var font: FontStyle
-    var x: Float
-    var y: Float
+    package var x: Float
+    package var y: Float
     var contraintStack: [Constraint]
     var containerStack: [LayoutItem]
     var translations: [String:String]
-    var currentPageNumber: Int
-    var currentPage: Page?
+    package var currentPageNumber: Int
+    package var currentPage: Page?
     
     public init ( _ trans: [String:String] = [:] ) {
         fgColor = "#000000"
@@ -269,8 +274,8 @@ open class RenderContext {
     } }
     
     open func stringCurrency ( from value: NSDecimalNumber? ) -> String {
-        // Format the decimal itself: going through Double loses cents on large amounts
-        return currencyFromatter.string( from: value ?? NSDecimalNumber.zero ) ?? ""
+        // Digits from the decimal itself: Double (and NumberFormatter on Linux) loses cents
+        return DecimalFormatting.string( from: value?.decimalValue ?? 0, using: currencyFromatter )
     }
     
     open func stringCurrency ( from value: Decimal? ) -> String {
@@ -292,9 +297,7 @@ open class RenderContext {
     } }
     
     open func stringNumber ( from value: NSDecimalNumber? ) -> String {
-//        let number = NSNumber( floatLiteral: d )
-//        numberFormatter.minimumFractionDigits = floor( d ) == d ? 0 : 2
-        return numberFormatter.string(from: value ?? 0 )!
+        return DecimalFormatting.string( from: value?.decimalValue ?? 0, using: numberFormatter )
     }
     
     open func stringNumber ( from value: Decimal? ) -> String {

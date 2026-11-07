@@ -10,6 +10,10 @@
 import Foundation
 import MIOCore
 import UIKit
+import MIOLayoutKit
+
+/// The PDF renderer of this module. MIOLayoutPDFLib declares the same name on macOS / Linux.
+public typealias PDFRender = PDFRender_CoreGraphics
 
 #if canImport(FoundationNetworking)
 import FoundationNetworking

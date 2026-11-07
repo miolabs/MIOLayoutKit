@@ -9,7 +9,7 @@ import Foundation
 
 
 public class Container< E: LayoutItem >: LayoutItem {
-    var children: [E]
+    package var children: [E]
     public var delegate: AddProtocol?
     var growDirection: SizeGrowDirection
     
@@ -74,7 +74,7 @@ public class Container< E: LayoutItem >: LayoutItem {
         for c in children { c.setCoordinates( x, y ) }
     }
     
-    override func render ( _ context: RenderContext ) {
+    override package func render ( _ context: RenderContext ) {
         // Passed as LayoutItem: a Container<Text> is not a Container<LayoutItem> (generic
         // classes are invariant), so the old forced cast crashed for typed containers.
         context.beginContainer( self )
@@ -95,8 +95,8 @@ public class Container< E: LayoutItem >: LayoutItem {
 }
 
 public class FooterHeaderContainer< H:LayoutItem, F: LayoutItem> : VStack<LayoutItem> {
-    var header: H?
-    var footer: F?
+    package var header: H?
+    package var footer: F?
     public var hideHeader: Bool
     public var hideFooter: Bool
 
