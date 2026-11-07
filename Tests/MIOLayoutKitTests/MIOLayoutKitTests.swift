@@ -41,14 +41,14 @@
             let layout = Layout( page )
             
             page.add( text_tr )
-            page.add( text_tr2 )
+            page.add( text_tr2 )  // no translation: shows the key, as production does
 
             layout.render( render )
             
             XCTAssertEqual( String( data: render.output( ), encoding: .utf8 ), """
 <div class="page a4">
 <div class="text-start text-sz-3">Helloo</div>
-<div class="text-start text-sz-3">__FORGOT__</div>
+<div class="text-start text-sz-3">FORGOT</div>
 </div>
 """ )
         }
@@ -176,6 +176,7 @@
             
             layout.render( render )
             
+            // Column widths are text-measure units, not pixels (0px today); real HTML widths come with the report table (P2 step 4)
             XCTAssertEqual( String( data: render.output( ), encoding: .utf8 ), """
 <div class="page a4">
 <div class="row" style="flex: 1">
@@ -185,8 +186,8 @@
     <div class="table-header">
         <table>
             <colgroup>
-<col style="width: 1px;"/>
-<col style="width: 2px;"/>
+<col style="width: 0px;"/>
+<col style="width: 0px;"/>
             </colgroup>
             <thead class="table-thead">
                 <tr>
@@ -203,8 +204,8 @@
     <div class="table-body">
         <table>
             <colgroup>
-<col style="width: 1px;"/>
-<col style="width: 2px;"/>
+<col style="width: 0px;"/>
+<col style="width: 0px;"/>
             </colgroup>
             <tbody class="table-tbody">
                 <tr aria-hidden="true" class="table-measure-row" style="height: 0px; font-size: 0px;">

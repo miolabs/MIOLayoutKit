@@ -53,7 +53,7 @@ public class Text: LayoutItem {
     }
     
     public func copyValues (_ src: Text ) {
-        original_text = src.text
+        original_text = src.original_text
         text          = src.text
         text_size     = src.text_size
         align         = src.align
@@ -93,6 +93,16 @@ public class Text: LayoutItem {
 
 
 public class LocalizedText: Text {
+    public override func clone ( ) -> Text {
+        let ret = LocalizedText( original_text )
+        ret.copyValues( self )
+        return ret
+    }
+
+    override open func shallowCopy ( ) -> LayoutItem {
+        return clone( )
+    }
+
     func apply_translation ( _ d: [String:String] ) {
        self.text = d[ self.original_text ] ?? self.original_text
     }

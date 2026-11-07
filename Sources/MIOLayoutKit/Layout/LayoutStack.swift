@@ -8,7 +8,11 @@
 import Foundation
 
 
-public class HStack< E: LayoutItem >: Container<E> {
+/// Non-generic markers so renderers can recognise a stack whatever its element type.
+public protocol HorizontalStackItem: AnyObject {}
+public protocol VerticalStackItem: AnyObject {}
+
+public class HStack< E: LayoutItem >: Container<E>, HorizontalStackItem {
         
     public override init ( _ flex: Int = 0, _ id: String? = nil ) {
         super.init( flex, id )
@@ -63,7 +67,7 @@ public class HStack< E: LayoutItem >: Container<E> {
 }
 
 
-public class VStack< E: LayoutItem >: Container<E> {
+public class VStack< E: LayoutItem >: Container<E>, VerticalStackItem {
     public override init ( _ flex: Int = 0, _ id: String? = nil ) {
         super.init( flex, id )
         growDirection = .vertical
@@ -96,7 +100,7 @@ public class VStack< E: LayoutItem >: Container<E> {
     override func setDimension ( _ dim: Size ) {
         let num_flex: Int = children.reduce( 0 ) { total, child in total + child.flex }
         let fixed_size = children.reduce( 0 ) { total, child in total + (child.flex == 0 ? child.size.height : 0) }
-        let flex_size = max( 0, Float(dim.width - fixed_size) / Float(num_flex) )
+        let flex_size = max( 0, Float(dim.height - fixed_size) / Float(num_flex) )
         
         var sz = Size( width: 0, height: 0 )
         for c in children {

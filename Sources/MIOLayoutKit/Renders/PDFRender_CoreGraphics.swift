@@ -92,7 +92,7 @@ public class PDFRender_CoreGraphics: RenderContext
         return renderData as Data
     }
             
-    public override func beginContainer(_ container: Container<LayoutItem>) {
+    public override func beginContainer(_ container: LayoutItem) {
         super.beginContainer(container)
         
         if container is A4 {
@@ -258,7 +258,7 @@ public class PDFRender_CoreGraphics: RenderContext
     }
     
     
-    public override func endContainer(_ container: Container<LayoutItem>) {
+    public override func endContainer(_ container: LayoutItem) {
         super.endContainer(container)
     }
     

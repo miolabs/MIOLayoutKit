@@ -46,9 +46,9 @@ public class HTMLRender: RenderContext {
             
             if text.text_size != .m { classes.append( "text-sz-\(text.text_size.rawValue)" ) }
             
-            m_output.append( "<div\(renderClasses(classes))\(renderStyles( styles ))>\(text.text)</div>")
+            m_output.append( "<div\(renderClasses(classes))\(renderStyles( styles ))>\(HTMLRender.escape( text.text ))</div>")
         } else if let img = item as? URLImage {
-            m_output.append( "<img src=\"\(img.url)\" width=\"\(Int(img.dimensions.width))\" height=\"\(Int(img.dimensions.height))\"/>")
+            m_output.append( "<img src=\"\(HTMLRender.escape( img.url ))\" width=\"\(Int(img.dimensions.width))\" height=\"\(Int(img.dimensions.height))\"/>")
         } else if let spc = item as? Space {
             styles.append( "width:\(Int(spc.size.width))px" )
             styles.append( "height:\(Int(spc.size.height))px" )
@@ -62,13 +62,30 @@ public class HTMLRender: RenderContext {
     func reset ( ) {
         m_output = []
     }
+
+    /// Text and attribute values come from tenant data: never emit them as markup.
+    public static func escape ( _ s: String ) -> String {
+        var out = ""
+        out.reserveCapacity( s.utf8.count )
+        for ch in s {
+            switch ch {
+            case "&":  out += "&amp;"
+            case "<":  out += "&lt;"
+            case ">":  out += "&gt;"
+            case "\"": out += "&quot;"
+            case "'":  out += "&#39;"
+            default:   out.append( ch )
+            }
+        }
+        return out
+    }
     
     override open func output() -> Data {
         return m_output.joined(separator: "\n").data( using: .utf8 )!
     }
     
     
-    override open func beginContainer ( _ container: Container<LayoutItem> ) {
+    override open func beginContainer ( _ container: LayoutItem ) {
         var styles: [String] = itemStyles( container )
         
         if container is A4 {
@@ -109,6 +126,21 @@ public class HTMLRender: RenderContext {
             }
             
             let DATA = pop_output()
+
+            var FOOTER = ""
+            if !table.hideFooter {
+                push_output()
+                m_output.append( "<tfoot class=\"table-tfoot\">" )
+                m_output.append( "<tr class=\"table-row table-footer-row\">" )
+                for col in table.footer!.children {
+                    m_output.append( "<td class=\"table-cell\">" )
+                    col.render( self )
+                    m_output.append( "</td>" )
+                }
+                m_output.append( "</tr>" )
+                m_output.append( "</tfoot>" )
+                FOOTER = "\n" + pop_output()
+            }
             var classes = ["table-fixed-header"]
             
             if table.border { classes.append( "border" ) }
@@ -139,7 +171,7 @@ public class HTMLRender: RenderContext {
 {{HIDDEN_ROW}}
                 </tr>
 {{DATA}}
-            </tbody>
+            </tbody>{{FOOTER}}
         </table>
     </div>
   </div>
@@ -148,11 +180,12 @@ public class HTMLRender: RenderContext {
                 table.replacingOccurrences(of: "{{COLS}}", with: COLS )
                      .replacingOccurrences(of: "{{HEADER}}", with: HEADER )
                      .replacingOccurrences(of: "{{HIDDEN_ROW}}", with: HIDDEN_ROW )
+                     .replacingOccurrences(of: "{{FOOTER}}", with: FOOTER )
                      .replacingOccurrences(of: "{{DATA}}", with: DATA )
                 )
-        } else if container is HStack {
+        } else if container is HorizontalStackItem {
             m_output.append( "<div class=\"row\"\(renderStyles( styles ))>" )
-        } else if container is VStack {
+        } else if container is VerticalStackItem {
             m_output.append( "<div class=\"col\"\(renderStyles( styles ))>" )
         } else {
             m_output.append( "<div\(renderStyles( styles ))>" )
@@ -186,7 +219,7 @@ public class HTMLRender: RenderContext {
     }
 
     
-    override open func endContainer ( _ container: Container<LayoutItem> ) {
+    override open func endContainer ( _ container: LayoutItem ) {
         m_output.append( "</div>" )
         super.endContainer( container )
     }

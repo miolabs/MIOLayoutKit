@@ -38,45 +38,61 @@ public class TextRender: RenderContext {
     }
 
     
-    override open func beginContainer ( _ container: Container<LayoutItem> ) {
-        if let table = container as? Table {
-            func draw_border ( ) {
-                x = table.x
-                local_write( "+" )
-                for col in table.header!.children {
-                    local_write( String( repeating: "-", count: Int( col.dimensions.width ) ) )
-                    local_write( "+" )
-                }
-                x = table.x
-                y += 1
+    override open func beginContainer ( _ container: LayoutItem ) {
+        super.beginContainer( container )
+        guard let table = container as? Table else { return }
+
+        // Character grid from the laid-out column widths (flex included). Table.setCoordinates
+        // narrows each column for the PDF borders (2 for the outer columns, 1 for inner
+        // ones); the text grid draws its own borders, so it adds that back.
+        let last = table.header!.children.count - 1
+        let widths = table.header!.children.enumerated( ).map { ( i, col ) in
+            Int( col.dimensions.width ) + ( i == 0 || i == last ? 2 : 1 )
+        }
+        let left = table.x
+        var line = table.y
+
+        func cell ( _ text: String, _ width: Int, _ align: TextAlign ) -> String {
+            let chars = Array( text )
+            let shown = chars.count > width ? String( chars.prefix( width ) ) : text
+            let space = max( 0, width - shown.count )
+            switch align {
+            case .left:   return shown + String( repeating: " ", count: space )
+            case .center: return String( repeating: " ", count: space / 2 ) + shown + String( repeating: " ", count: space - space / 2 )
+            case .right:  return String( repeating: " ", count: space ) + shown
             }
-            
-            x = table.x
-            y = table.y
-            
-            draw_border( )
-            local_write( "|" )
-            
-            for i in table.cols_key.indices {
-                let col = table.header!.children[ i ]
-                renderItem( col )
-                local_write( "|" )
+        }
+
+        func border ( ) {
+            x = left; y = line
+            local_write( "+" + widths.map { String( repeating: "-", count: $0 ) }.joined( separator: "+" ) + "+" )
+            line += 1
+        }
+
+        func row ( _ texts: [Text] ) {
+            x = left; y = line
+            var out = "|"
+            for ( i, w ) in widths.enumerated( ) {
+                let t = i < texts.count ? texts[ i ] : nil
+                out += cell( t?.text ?? "", w, t?.align ?? .left ) + "|"
             }
-            
-            for i in table.body.children.indices {
-                let row = table.body.children[ i ]
-                y += row.dimensions.height
-                draw_border( )
-                local_write( "|" )
-                for j in (row as! HStack).children.indices {
-                    let col = (row as! HStack).children[ j ] as! Text
-                    renderItem( col )
-                    local_write( "|" )
-                }
-            }
-            
-            y += table.body.children.last?.dimensions.height ?? 0
-            draw_border( )
+            local_write( out )
+            line += 1
+        }
+
+        border( )
+        if !table.hideHeader {
+            row( table.header!.children )
+            border( )
+        }
+        for r in table.body.children {
+            let texts = ( r as? Container<LayoutItem> )?.children.compactMap { $0 as? Text } ?? []
+            row( texts )
+            border( )
+        }
+        if !table.hideFooter {
+            row( table.footer!.children )
+            border( )
         }
     }
 
