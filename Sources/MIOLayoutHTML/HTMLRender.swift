@@ -64,6 +64,11 @@ public class HTMLRender: RenderContext {
         m_output = []
     }
 
+    /// Appends markup as is (for custom node handlers). Escape any data with `escape(_:)`.
+    public func appendRaw ( _ html: String ) {
+        m_output.append( html )
+    }
+
     /// Text and attribute values come from tenant data: never emit them as markup.
     public static func escape ( _ s: String ) -> String {
         var out = ""

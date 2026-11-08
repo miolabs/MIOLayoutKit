@@ -82,7 +82,7 @@ open class LayoutItem {
     func setValue ( _ value: Any ) throws { }
     
     open func meassure ( _ context: RenderContext ) {
-        self.size = context.meassure( self )
+        self.size = context.measureWithHandler( self ) ?? context.meassure( self )
     }
 
     func setDimension ( _ dim: Size ) {
@@ -101,6 +101,7 @@ open class LayoutItem {
     }
     
     package func render ( _ context: RenderContext ) {
+        if context.renderWithHandler( self ) { return }
         context.renderItem( self )
     }
     
