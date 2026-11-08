@@ -54,6 +54,11 @@ public class Container< E: LayoutItem >: LayoutItem {
     
     override open func meassure ( _ context: RenderContext )
     {
+        if let custom = context.measureWithHandler( self ) {
+            for c in children { c.meassure( context ) }
+            size = custom
+            return
+        }
         var dim = Size( )
         
         for c in children {
@@ -75,6 +80,8 @@ public class Container< E: LayoutItem >: LayoutItem {
     }
     
     override package func render ( _ context: RenderContext ) {
+        // A handler for a custom container draws it, children included
+        if context.renderWithHandler( self ) { return }
         // Passed as LayoutItem: a Container<Text> is not a Container<LayoutItem> (generic
         // classes are invariant), so the old forced cast crashed for typed containers.
         context.beginContainer( self )

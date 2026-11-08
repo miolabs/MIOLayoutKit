@@ -46,7 +46,8 @@ public class PDFRender_CoreGraphics: RenderContext
     }
     
     
-    var context:CGContext!
+    /// The page context, for custom node handlers (LayoutRenderHandlers).
+    public internal(set) var context:CGContext!
     var renderData = NSMutableData()
         
     var pageMargin: Margin = Margin( )

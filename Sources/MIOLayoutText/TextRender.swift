@@ -104,6 +104,9 @@ public class TextRender: RenderContext {
     
 
 
+    /// Writes `text` at column `x`, line `y` (for custom node handlers).
+    public func write ( text: String, x: Int, y: Int ) { write( x, y, text ) }
+
     func write ( _ x: Int, _ y: Int, _ str: String ) {
         while lines.count <= y { lines.append( "" ) }
         

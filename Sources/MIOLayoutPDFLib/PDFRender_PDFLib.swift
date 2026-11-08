@@ -20,7 +20,8 @@ import FoundationNetworking
 
 public class PDFRender_PDFLib: RenderContext
 {
-    var pdf = PDF()
+    /// The PDFLib document, for custom node handlers (LayoutRenderHandlers).
+    public internal(set) var pdf = PDF()
     var renderData:Data!
     
     var defaultFont:Int32 = -1

@@ -193,6 +193,11 @@ open class RenderContext {
     var containerStack: [LayoutItem]
     var translations: [String:String]
     package var currentPageNumber: Int
+
+    /// Where custom node handlers are looked up (see LayoutRenderHandlers).
+    public var renderHandlers: LayoutRenderHandlers = .shared
+    /// Problems found while rendering (custom node types without a handler, …).
+    public internal(set) var issues: [String] = []
     package var currentPage: Page?
     
     public init ( _ trans: [String:String] = [:] ) {
