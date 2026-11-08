@@ -19,10 +19,12 @@ let package = Package(
         .library( name: "MIOLayoutCoreGraphics", targets: ["MIOLayoutCoreGraphics"] ),
     ],
     traits: [
-        // PDFLib-Swift is only fetched and linked when a consumer enables this trait:
-        // .package( url: "…/MIOLayoutKit", branch: "main", traits: ["PDFLib"] )
+        // On by default: Xcode workspaces that use this as a local package cannot enable
+        // traits. Builds that must not fetch PDFLib-Swift (web / wasm, apps without PDF)
+        // turn it off: .package( url: "…/MIOLayoutKit", branch: "main", traits: [] )
+        // On iOS PDFLib-Swift is never linked and MIOLayoutPDFLib compiles empty.
         .trait( name: "PDFLib", description: "PDF rendering with PDFLib (macOS / Linux)" ),
-        .default( enabledTraits: [] ),
+        .default( enabledTraits: ["PDFLib"] ),
     ],
     dependencies: [
         .package( url: "https://github.com/miolabs/MIOCore.git", from: "2.0.0" ),
