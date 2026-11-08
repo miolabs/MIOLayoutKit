@@ -5,11 +5,13 @@
 //  Created by Javier Segura Perez on 27/1/22.
 //
 
-#if !os(iOS)
+// Built only with the PDFLib trait (and where PDFLib-Swift exists: macOS / Linux)
+#if PDFLib && canImport(PDFLib_Swift)
 
 import Foundation
 import PDFLib_Swift
 import MIOCore
+import MIOLayoutKit
 
 #if canImport(FoundationNetworking)
 import FoundationNetworking

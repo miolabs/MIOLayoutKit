@@ -1,5 +1,7 @@
     import XCTest
     @testable import MIOLayoutKit
+@testable import MIOLayoutHTML
+@testable import MIOLayoutText
 
     final class MIOLayoutKitTests: XCTestCase {
         func testText ( ) throws {

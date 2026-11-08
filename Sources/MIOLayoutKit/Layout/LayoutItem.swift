@@ -17,11 +17,11 @@ open class LayoutItem {
     var include_in_pages: IncludeInPage = .here
     var parent:LayoutItem?
     var id: String?
-    var flex: Int
-    var x: Float
-    var y: Float
-    var size: Size
-    var dimensions: Size
+    package var flex: Int
+    package var x: Float
+    package var y: Float
+    package var size: Size
+    package var dimensions: Size
     var is_unbreakable: Bool
     public var style: Style
     
@@ -100,7 +100,7 @@ open class LayoutItem {
         self.y = y
     }
     
-    func render ( _ context: RenderContext ) {
+    package func render ( _ context: RenderContext ) {
         context.renderItem( self )
     }
     
@@ -108,7 +108,7 @@ open class LayoutItem {
         delegate.onItemAdded( self )
     }
     
-    func absPosition() -> (x:Float, y:Float) {
+    package func absPosition() -> (x:Float, y:Float) {
         var abs_x = x
         var abs_y = y
         var p = parent

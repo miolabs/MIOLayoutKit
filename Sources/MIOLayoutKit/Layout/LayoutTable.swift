@@ -21,7 +21,7 @@ public struct TableCol {
 // indentRow( X, level )
 public class Table: FooterHeaderContainer< HStack<Text>, HStack<Text> > {
     var cols_key: [String]
-    var body: VStack<LayoutItem>
+    package var body: VStack<LayoutItem>
     var max_col: [Float]
     var max_row: [Float]
     public var border: Bool

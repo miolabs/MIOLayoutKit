@@ -1,5 +1,5 @@
-// swift-tools-version:5.9
-// The swift-tools-version declares the minimum version of Swift required to build this package.
+// swift-tools-version:6.1
+// Package traits (SE-0450) need tools 6.1.
 
 import PackageDescription
 
@@ -10,29 +10,50 @@ let package = Package(
         .macOS(.v12), .iOS( .v15 )
     ],
     products: [
-        // Products define the executables and libraries a package produces, and make them visible to other packages.
-        .library(
-            name: "MIOLayoutKit",
-            targets: ["MIOLayoutKit"]),
+        // Layout design and composition: model, DSL, engine, serialization, data provider.
+        .library( name: "MIOLayoutKit", targets: ["MIOLayoutKit"] ),
+        // Renderers: an app links the ones it needs, or none.
+        .library( name: "MIOLayoutHTML", targets: ["MIOLayoutHTML"] ),
+        .library( name: "MIOLayoutText", targets: ["MIOLayoutText"] ),
+        .library( name: "MIOLayoutPDFLib", targets: ["MIOLayoutPDFLib"] ),
+        .library( name: "MIOLayoutCoreGraphics", targets: ["MIOLayoutCoreGraphics"] ),
+    ],
+    traits: [
+        // On by default: Xcode workspaces that use this as a local package cannot enable
+        // traits. Builds that must not fetch PDFLib-Swift (web / wasm, apps without PDF)
+        // turn it off: .package( url: "…/MIOLayoutKit", branch: "main", traits: [] )
+        // On iOS PDFLib-Swift is never linked and MIOLayoutPDFLib compiles empty.
+        .trait( name: "PDFLib", description: "PDF rendering with PDFLib (macOS / Linux)" ),
+        .default( enabledTraits: ["PDFLib"] ),
     ],
     dependencies: [
         .package( url: "https://github.com/miolabs/MIOCore.git", from: "2.0.0" ),
         .package( url: "https://github.com/miolabs/PDFLib-Swift.git", branch: "main" )
     ],
     targets: [
-        // Targets are the basic building blocks of a package. A target can define a module or a test suite.
-        // Targets can depend on other targets in this package, and on products in packages this package depends on.
+        .target( name: "MIOLayoutKit" ),
+
+        .target( name: "MIOLayoutHTML", dependencies: ["MIOLayoutKit"] ),
+        .target( name: "MIOLayoutText", dependencies: ["MIOLayoutKit"] ),
         .target(
-            name: "MIOLayoutKit",
+            name: "MIOLayoutPDFLib",
             dependencies: [
-                .product(name: "MIOCore", package: "MIOCore" ),
-                .product(name: "PDFLib-Swift", package: "PDFLib-Swift", condition: .when( platforms: [.macOS, .linux] ) )
+                "MIOLayoutKit",
+                .product( name: "MIOCore", package: "MIOCore", condition: .when( traits: ["PDFLib"] ) ),
+                .product( name: "PDFLib-Swift", package: "PDFLib-Swift", condition: .when( platforms: [.macOS, .linux], traits: ["PDFLib"] ) )
             ]
-//            swiftSettings: [.define( "PDFLIB_7" )]
         ),
+        .target(
+            name: "MIOLayoutCoreGraphics",
+            dependencies: [
+                "MIOLayoutKit",
+                .product( name: "MIOCore", package: "MIOCore", condition: .when( platforms: [.iOS] ) )
+            ]
+        ),
+
         .testTarget(
             name: "MIOLayoutKitTests",
-            dependencies: ["MIOLayoutKit"],
+            dependencies: ["MIOLayoutKit", "MIOLayoutHTML", "MIOLayoutText", "MIOLayoutPDFLib"],
             linkerSettings: [
                 .linkedFramework( "SystemConfiguration", .when( platforms: [.macOS] ) )
             ]),

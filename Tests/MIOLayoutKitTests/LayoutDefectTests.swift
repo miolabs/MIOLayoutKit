@@ -7,6 +7,8 @@
 
 import XCTest
 @testable import MIOLayoutKit
+@testable import MIOLayoutHTML
+@testable import MIOLayoutText
 
 final class LayoutDefectTests: XCTestCase {
 
@@ -158,6 +160,22 @@ final class LayoutDefectTests: XCTestCase {
         XCTAssertTrue(out.contains(">right</div>"), out)
     }
 
+    // MARK: 10. Shared registries are safe to use from parallel renders
+
+    func test_registries_concurrentRegisterAndLookup() {
+        let library = LayoutFragmentLibrary()
+        let registry = LayoutNodeRegistry(standardCoders: true)
+        DispatchQueue.concurrentPerform(iterations: 2_000) { i in
+            library.register("f\(i % 50)", node: LayoutNode(type: "space"))
+            _ = library.fragment("f\(i % 50)")
+            registry.register(LayoutNodeCoder(nodeType: "test.n\(i % 20)", decode: { _, _ in LayoutItem() }))
+            _ = registry.decoder(for: "text")
+            _ = registry.encodeOrder.count
+        }
+        XCTAssertNotNil(library.fragment("f49"))
+        XCTAssertNotNil(registry.decoder(for: "test.n19"))
+    }
+
     // MARK: 8. Currency keeps Decimal precision
 
     func test_stringCurrency_keepsDecimalPrecision() {
@@ -168,5 +186,30 @@ final class LayoutDefectTests: XCTestCase {
         let value = Decimal(string: "1234567890123456.78")!
 
         XCTAssertEqual(render.stringCurrency(from: value), "$1,234,567,890,123,456.78")
+    }
+
+    func test_stringCurrency_roundsTheExactDecimal() {
+        let render = HTMLRender()
+        render.localeIdentifier = "en_US"
+        // As a Double this is 999999.99499…, which rounds down; the exact value is a tie
+        // and rounds half-even (NumberFormatter's mode) up.
+        XCTAssertEqual(render.stringCurrency(from: Decimal(string: "999999.995")!), "$1,000,000.00")
+        // rounds to zero: no "-$0.00" (the Double path printed one)
+        XCTAssertEqual(render.stringCurrency(from: Decimal(string: "-0.004")!), "$0.00")
+    }
+
+    func test_decimalFormatting_matchesNumberFormatterForOrdinaryAmounts() {
+        // Same output as NumberFormatter wherever a Double is exact enough
+        for locale in ["es_ES", "en_US", "de_DE", "fr_FR", "en_GB"] {
+            let render = HTMLRender()
+            render.localeIdentifier = locale
+            for text in ["0", "1", "0.5", "12.345", "1234.5", "-1234.56", "-0.01", "100", "0.125", "1234567.891"] {
+                let d = Decimal(string: text)!
+                let viaDouble = render.currencyFromatter.string(from: NSNumber(value: NSDecimalNumber(decimal: d).doubleValue))!
+                XCTAssertEqual(render.stringCurrency(from: d), viaDouble, "\(locale) \(text)")
+                let numberViaDouble = render.numberFormatter.string(from: NSNumber(value: NSDecimalNumber(decimal: d).doubleValue))!
+                XCTAssertEqual(render.stringNumber(from: d), numberViaDouble, "number \(locale) \(text)")
+            }
+        }
     }
 }
