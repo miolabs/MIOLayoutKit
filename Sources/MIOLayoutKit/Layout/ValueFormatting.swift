@@ -27,6 +27,8 @@ public enum ValueType: String, Sendable, CaseIterable {
     case dateTime        = "date-time"
     case longDate        = "long-date"
     case longDateTime    = "long-date-time"
+    /// A measure-unit cell: the report sends {quantity, unit, isContainer, title}; shows `title`.
+    case units
 }
 
 public struct ValueFormat: Sendable, Equatable {
@@ -97,6 +99,9 @@ public final class ValueFormatter {
         case .localizedString:
             let key = "\(value)"
             return translations[ key ] ?? key
+        case .units:
+            if let dict = value as? [String:Any] { return ( dict[ "title" ] as? String ) ?? "" }
+            return "\(value)"
         case .number, .integer, .percentage, .currency, .longCurrency:
             guard let decimal = ValueFormatter.decimal( from: value ) else { return "\(value)" }
             let text = DecimalFormatting.string( from: decimal, using: numberFormatter( format ) )

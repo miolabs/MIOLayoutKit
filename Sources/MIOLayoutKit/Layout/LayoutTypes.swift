@@ -198,6 +198,15 @@ open class RenderContext {
     public var renderHandlers: LayoutRenderHandlers = .shared
     /// Problems found while rendering (custom node types without a handler, …).
     public internal(set) var issues: [String] = []
+
+    private var _valueFormatter: ValueFormatter?
+    /// Formats raw values (DataTable cells) for this render's locale and translations.
+    public var valueFormatter: ValueFormatter {
+        if let f = _valueFormatter { return f }
+        let f = makeValueFormatter( )
+        _valueFormatter = f
+        return f
+    }
     package var currentPage: Page?
     
     public init ( _ trans: [String:String] = [:] ) {
@@ -258,7 +267,7 @@ open class RenderContext {
     
     var locale_id:String = "es_ES"
     open var localeIdentifier:String {
-        set { locale_id = newValue }
+        set { locale_id = newValue; _valueFormatter = nil }
         get { return locale_id }
     }
     
