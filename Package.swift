@@ -27,11 +27,14 @@ let package = Package(
         .default( enabledTraits: ["PDFLib"] ),
     ],
     dependencies: [
-        .package( url: "https://github.com/miolabs/MIOCore.git", from: "2.0.0" ),
+        .package( url: "https://github.com/miolabs/MIOCore.git", from: "2.0.8" ),   // MCRuntime.superclass(of:)
         .package( url: "https://github.com/miolabs/PDFLib-Swift.git", branch: "main" )
     ],
     targets: [
-        .target( name: "MIOLayoutKit" ),
+        .target(
+            name: "MIOLayoutKit",
+            dependencies: [ .product( name: "MIOCore", package: "MIOCore" ) ]   // MCRuntime (class hierarchy)
+        ),
 
         .target( name: "MIOLayoutHTML", dependencies: ["MIOLayoutKit"] ),
         .target( name: "MIOLayoutText", dependencies: ["MIOLayoutKit"] ),

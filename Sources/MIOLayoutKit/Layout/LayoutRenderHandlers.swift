@@ -21,6 +21,7 @@
 //
 
 import Foundation
+import MIOCore
 
 public final class LayoutRenderHandlers: @unchecked Sendable {
 
@@ -66,10 +67,10 @@ public final class LayoutRenderHandlers: @unchecked Sendable {
                 var rendererClass: AnyClass? = type( of: renderer )
                 while let rc = rendererClass {
                     if let e = entries[ Key( item: ObjectIdentifier( ic ), renderer: ObjectIdentifier( rc ) ) ] { return e }
-                    rendererClass = class_getSuperclassSafe( rc )
+                    rendererClass = MCRuntime.superclass( of: rc )
                 }
                 if isBuiltIn( ic ) { break }      // built-in types: exact registrations only
-                itemClass = class_getSuperclassSafe( ic )
+                itemClass = MCRuntime.superclass( of: ic )
             }
             return nil
         }
@@ -93,15 +94,6 @@ final class BuiltInTypes: @unchecked Sendable {
         lock.withLock { cache[ id ] = builtIn }
         return builtIn
     }
-}
-
-/// Superclass of a Swift class on every platform (no ObjectiveC runtime on Linux / wasm).
-func class_getSuperclassSafe ( _ c: AnyClass ) -> AnyClass? {
-    #if canImport(ObjectiveC)
-    return class_getSuperclass( c )
-    #else
-    return _getSuperclass( c )
-    #endif
 }
 
 extension RenderContext {
