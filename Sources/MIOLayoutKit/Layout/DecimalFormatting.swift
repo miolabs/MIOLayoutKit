@@ -19,7 +19,7 @@ package enum DecimalFormatting {
     package static func string ( from value: Decimal, using formatter: NumberFormatter ) -> String {
         let maxFraction = max( 0, formatter.maximumFractionDigits )
         let minFraction = max( 0, min( formatter.minimumFractionDigits, maxFraction ) )
-        let rounded     = round( value, scale: maxFraction )
+        let rounded     = round( value, scale: maxFraction, mode: formatter.roundingMode )
 
         if maxFraction == 0 {
             return formatter.string( from: NSDecimalNumber( decimal: rounded ) ) ?? rounded.description
@@ -46,10 +46,22 @@ package enum DecimalFormatting {
         return output.replacingCharacters( in: range, with: fraction.isEmpty ? "" : separator + fraction )
     }
 
-    static func round ( _ value: Decimal, scale: Int ) -> Decimal {
+    /// Rounds like `mode` (the formatter's roundingMode; NumberFormatter's default is half-even).
+    static func round ( _ value: Decimal, scale: Int, mode: NumberFormatter.RoundingMode = .halfEven ) -> Decimal {
         var source = value
         var result = Decimal( )
-        NSDecimalRound( &result, &source, scale, .bankers )   // NumberFormatter's default: half-even
+        let negative = value < 0
+        let decimalMode: NSDecimalNumber.RoundingMode
+        switch mode {
+        case .halfEven:            decimalMode = .bankers
+        case .halfUp, .halfDown:   decimalMode = .plain      // ties away from zero (half-down is rare: treated as half-up)
+        case .up:                  decimalMode = negative ? .down : .up   // away from zero
+        case .down:                decimalMode = negative ? .up : .down   // towards zero
+        case .ceiling:             decimalMode = .up
+        case .floor:               decimalMode = .down
+        @unknown default:          decimalMode = .bankers
+        }
+        NSDecimalRound( &result, &source, scale, decimalMode )
         return result
     }
 }

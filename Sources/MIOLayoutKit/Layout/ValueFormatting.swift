@@ -114,7 +114,7 @@ public final class ValueFormatter {
 
     // MARK: - Values
 
-    static func decimal ( from value: Any ) -> Decimal? {
+    package static func decimal ( from value: Any ) -> Decimal? {
         switch value {
         case let d as Decimal:        return d
         case let d as NSDecimalNumber: return d.decimalValue
@@ -161,6 +161,8 @@ public final class ValueFormatter {
         }
         f.minimumFractionDigits = minF
         f.maximumFractionDigits = maxF
+        // Ties round up (2193.725 → 2193.73), as the web manager and the scripts do
+        f.roundingMode = .halfUp
         numberFormatters[ key ] = f
         return f
     }

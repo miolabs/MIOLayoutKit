@@ -54,11 +54,14 @@ public struct DataRowStyle: Sendable, Equatable {
     public var excludedFromTotals: Bool
     /// One of the report colours: "red", "green", "yellow", "grey", "strong".
     public var color: String?
+    /// The row opens something when clicked (a report's segue); HTML marks it `.link`.
+    public var isLink: Bool
 
-    public init ( isSubRow: Bool = false, excludedFromTotals: Bool = false, color: String? = nil ) {
+    public init ( isSubRow: Bool = false, excludedFromTotals: Bool = false, color: String? = nil, isLink: Bool = false ) {
         self.isSubRow = isSubRow
         self.excludedFromTotals = excludedFromTotals
         self.color = color
+        self.isLink = isLink
     }
 }
 
@@ -235,7 +238,8 @@ public final class DataTable: LayoutItem {
 // MARK: - Sources
 
 /// Rows as dictionaries keyed by column, with the report v1 row keys for styles:
-/// `__sub_row__`, `__no_subtotal__`, `__row_color__`, `__<key>__formatter__`,
+/// `__sub_row__`, `__no_subtotal__`, `__row_color__`, `__segue_identifier__` (a link row),
+/// `__<key>__formatter__`,
 /// `__<key>__indent_level__`, `__<key>__color__`.
 public final class DictionaryRowsSource: DataTableSource {
     public var rows: [[String:Any]]
@@ -250,7 +254,8 @@ public final class DictionaryRowsSource: DataTableSource {
         let r = rows[ row ]
         return DataRowStyle( isSubRow: ( r[ "__sub_row__" ] as? Bool ) == true
                            , excludedFromTotals: ( r[ "__no_subtotal__" ] as? Bool ) == true
-                           , color: r[ "__row_color__" ] as? String )
+                           , color: r[ "__row_color__" ] as? String
+                           , isLink: r[ "__segue_identifier__" ] is String )
     }
 
     public func cellStyle ( row: Int, column: String ) -> DataCellStyle? {
