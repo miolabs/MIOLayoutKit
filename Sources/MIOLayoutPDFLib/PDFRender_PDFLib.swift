@@ -256,6 +256,11 @@ public class PDFRender_PDFLib: RenderContext
     
     override open func renderItem ( _ item: LayoutItem ) {
         rect( item )
+
+        if let table = item as? DataTable {
+            drawDataTable( table )
+            return
+        }
         
         if clip( item ) {
             return
@@ -366,6 +371,10 @@ public class PDFRender_PDFLib: RenderContext
     var defaultFontSize:Double { get { return fontSizeInPoints (.s ) } }
     
     override open func meassure ( _ item: LayoutItem ) -> Size {
+        if let table = item as? DataTable {
+            let widths = dataTableNaturalWidths( table )
+            return Size( width: widths.reduce( 0, + ), height: dataTableMetrics( table ).height( of: table ) )
+        }
         if let text = item as? Text {
             let fs = fontSizeInPoints( text.text_size )
             let fs_line_height: Double = line_height( fs )
@@ -427,6 +436,11 @@ public class PDFRender_PDFLib: RenderContext
         return (0, 0, 0, 0)
     }
     
+    public override func dataTableMetrics ( _ table: DataTable ) -> DataTableMetrics {
+        let line = Float( line_height( fontSizeInPoints( table.textSize ) ) )
+        return DataTableMetrics( title: line + 6, header: line + 2, row: line, footer: line + 2 )
+    }
+
     open override func beginPage ( _ page: Page ) {
         super.beginPage( page )
         pdf.beginPage(options: "width=a4.width height=a4.height")
@@ -438,5 +452,135 @@ public class PDFRender_PDFLib: RenderContext
         pdf.endPage()
     }
     
+}
+
+// MARK: - DataTable
+
+extension PDFRender_PDFLib {
+
+    static let dataTableCellPadding: Float = 3
+    static let dataTableIndentStep: Float = 10
+    static let dataTableColors: [String:String] = [ "red": "#C0392B", "green": "#1E8449", "yellow": "#B7950B", "grey": "#888888" ]
+
+    /// Natural column widths (points), measured once on the whole table and kept on it, so
+    /// every page fragment uses the same columns.
+    func dataTableNaturalWidths ( _ table: DataTable ) -> [Float] {
+        if let widths = table.columnWidths { return widths }
+        let fs = fontSizeInPoints( table.textSize )
+        let formatter = valueFormatter
+        let columns = table.visibleColumns
+        var widths = columns.map { Float( text_width( localizedString( $0.title ), size: fs, bold: true, italic: false ) ) }
+        for row in table.visibleRows {
+            for ( i, c ) in columns.enumerated( ) {
+                let ( text, style ) = table.cellText( row: row, column: c, formatter: formatter )
+                let indent = Float( style?.indentLevel ?? 0 ) * PDFRender_PDFLib.dataTableIndentStep
+                widths[ i ] = max( widths[ i ], Float( text_width( text, size: fs, bold: false, italic: false ) ) + indent )
+            }
+        }
+        for footer in table.footers {
+            let values = table.footerValues( footer )
+            for ( i, c ) in columns.enumerated( ) {
+                let text = formatter.string( values[ c.key ], format: c.format )
+                widths[ i ] = max( widths[ i ], Float( text_width( text, size: fs, bold: true, italic: false ) ) )
+            }
+        }
+        widths = widths.map { $0 + 2 * PDFRender_PDFLib.dataTableCellPadding }
+        table.columnWidths = widths
+        return widths
+    }
+
+    /// Widths fitted to the table's laid-out width: extra space goes to the first column,
+    /// too-wide tables shrink every column proportionally.
+    func dataTableFittedWidths ( _ table: DataTable ) -> [Float] {
+        var widths = dataTableNaturalWidths( table )
+        let available = table.dimensions.width
+        let natural = widths.reduce( 0, + )
+        guard available > 0, natural > 0, !widths.isEmpty else { return widths }
+        if natural < available { widths[ 0 ] += available - natural }
+        else if natural > available { widths = widths.map { $0 * available / natural } }
+        return widths
+    }
+
+    func drawDataTable ( _ table: DataTable ) {
+        let m = dataTableMetrics( table )
+        let fs = fontSizeInPoints( table.textSize )
+        let widths = dataTableFittedWidths( table )
+        let columns = table.visibleColumns
+        let formatter = valueFormatter
+        let origin = pos( table )                                    // bottom-left of the box
+        var cursor = Float( origin.y ) + table.dimensions.height     // top, moving down
+        let left = Float( origin.x )
+        let tableWidth = widths.reduce( 0, + )
+
+        func cell ( _ text: String, x: Float, width: Float, height: Float, align: TextAlign, bold: Bool, color: String?, indent: Float = 0 ) {
+            if text.isEmpty { return }
+            var opts = [ "font={\( defaultFont( bold, false ) )}", "fontsize=\(fs)", "fitmethod=auto" ]
+            let pad = PDFRender_PDFLib.dataTableCellPadding
+            let boxWidth = max( 1, width - 2 * pad - indent )
+            opts.append( "boxsize={\(boxWidth) \(height)}" )
+            opts.append( "position={\(textAlignString( align )) bottom}" )
+            if let color = color {
+                let ( r, g, b, _ ) = parse_color( color )
+                opts.append( "fillcolor={rgb \(r) \(g) \(b)}" )
+            }
+            try? pdf.fitTextLine( text: text, x: Double( x + pad + indent ), y: Double( cursor - height + 4 ), options: opts.joined( separator: " " ) )
+        }
+
+        func rule ( at y: Float ) {
+            setColor( "#000000" )
+            pdf.rect( x: Double( left ), y: Double( y ), width: Double( tableWidth ), height: 0.5 )
+            pdf.fill( )
+        }
+
+        if let title = table.title, !title.isEmpty {
+            var opts = [ "font={\( defaultFont( true, false ) )}", "fontsize=\(fs + 2)", "fitmethod=nofit" ]
+            opts.append( "boxsize={\(tableWidth) \(m.title)}" )
+            opts.append( "position={left bottom}" )
+            try? pdf.fitTextLine( text: localizedString( title ), x: Double( left ), y: Double( cursor - m.title + 4 ), options: opts.joined( separator: " " ) )
+            cursor -= m.title
+        }
+
+        if table.showHeader {
+            var x = left
+            for ( i, c ) in columns.enumerated( ) {
+                cell( localizedString( c.title ), x: x, width: widths[ i ], height: m.header, align: c.align, bold: true, color: nil )
+                x += widths[ i ]
+            }
+            cursor -= m.header
+            rule( at: cursor )
+        }
+
+        for row in table.rowsToDraw {
+            let rowStyle = table.source.rowStyle( row: row )
+            var x = left
+            for ( i, c ) in columns.enumerated( ) {
+                let ( text, style ) = table.cellText( row: row, column: c, formatter: formatter )
+                let colorName = style?.color ?? rowStyle.color
+                let bold = colorName == "strong"
+                var color = colorName.flatMap { PDFRender_PDFLib.dataTableColors[ $0 ] }
+                if color == nil && table.isZero( row: row, column: c ) { color = "#AAAAAA" }
+                let indent = Float( style?.indentLevel ?? 0 ) * PDFRender_PDFLib.dataTableIndentStep
+                cell( text, x: x, width: widths[ i ], height: m.row, align: c.align, bold: bold, color: color, indent: indent )
+                x += widths[ i ]
+            }
+            cursor -= m.row
+        }
+
+        let footers = table.footersToDraw
+        if !footers.isEmpty {
+            rule( at: cursor - 1 )
+            for footer in footers {
+                let values = table.footerValues( footer )
+                var x = left
+                for ( i, c ) in columns.enumerated( ) {
+                    var text = formatter.string( values[ c.key ], format: c.format )
+                    if i == 0, let label = footer.label, values[ c.key ] == nil { text = localizedString( label ) }
+                    cell( text, x: x, width: widths[ i ], height: m.footer, align: c.align, bold: true, color: nil )
+                    x += widths[ i ]
+                }
+                cursor -= m.footer
+            }
+        }
+    }
 }
 #endif

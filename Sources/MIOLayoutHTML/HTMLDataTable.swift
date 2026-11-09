@@ -39,12 +39,13 @@ extension HTMLRender {
             out.append( "</tr></thead>" )
         }
         out.append( "<tbody>" )
-        out.append( dataTableRowsHTML( table, range: 0..<table.visibleRows.count, formatter: formatter ) )
+        let drawn = table.pageRows ?? 0..<table.visibleRows.count
+        out.append( dataTableRowsHTML( table, range: drawn, formatter: formatter ) )
         out.append( "</tbody>" )
 
-        if !table.footers.isEmpty {
+        if !table.footersToDraw.isEmpty {
             out.append( "<tfoot>" )
-            for footer in table.footers {
+            for footer in table.footersToDraw {
                 let values = table.footerValues( footer )
                 out.append( "<tr class=\"data-footer\">" )
                 for ( i, c ) in columns.enumerated( ) {

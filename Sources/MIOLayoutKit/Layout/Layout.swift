@@ -40,13 +40,26 @@ public class Layout: AddProtocol {
             context.beginRender( rootItem )
         }
         
-            rootItem.meassure( context )
-            // This triggers resizing in children that has flex
-            rootItem.setDimension( rootItem.dimensions )
-            context.currentPage = page
-            //let coords = context.beginCoords()
-            let coords = Vector2D(x: 0.0, y: 0.0)
-            rootItem.setCoordinates( coords.x, coords.y )
+            func layout ( ) {
+                rootItem.meassure( context )
+                // This triggers resizing in children that has flex
+                rootItem.setDimension( rootItem.dimensions )
+                context.currentPage = page
+                //let coords = context.beginCoords()
+                let coords = Vector2D(x: 0.0, y: 0.0)
+                rootItem.setCoordinates( coords.x, coords.y )
+            }
+            layout( )
+
+            // Data tables longer than their page become one fragment per page (header
+            // repeated); lay out again after each split, since everything below moves.
+            if let pageHeight = original_page_dimensions?.height, pageHeight > 0 {
+                var splits = 0
+                while splits < 1000, splitFirstCrossingDataTable( context, pageHeight: pageHeight ) {
+                    splits += 1
+                    layout( )
+                }
+            }
         
             if page != nil {
                 page!.dimensions = original_page_dimensions!
@@ -89,7 +102,10 @@ public class Layout: AddProtocol {
         var ret: [Page] = [ page.newPage( 0 ) ]
 
         func page_for_offset ( _ item: LayoutItem, start: Bool ) -> Int {
-            let y = start ? item.y : item.y + item.dimensions.height
+            // Data table page fragments start / end exactly on a page boundary: look half a
+            // point inside them, so rounding never puts one on the neighbouring page too.
+            let nudge: Float = ( item as? DataTable )?.pageRows != nil ? 0.5 : 0
+            let y = start ? item.y + nudge : item.y + item.dimensions.height - nudge
             
             while ( (-ret.last!.y + ret.last!.dimensions.height) < y ) {
                 let new_page = page.newPage( ret.count )

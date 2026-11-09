@@ -227,6 +227,12 @@ open class RenderContext {
     open func endRender ( ) { }
     
     open func meassure ( _ item: LayoutItem ) -> Size { return Size( width: 0, height: 0 ) }
+
+    /// Heights of a DataTable's header line, rows and footer lines in this renderer's units
+    /// (used to split tables across pages). Renderers that paginate override it.
+    open func dataTableMetrics ( _ table: DataTable ) -> DataTableMetrics {
+        DataTableMetrics( title: 1, header: 1, row: 1, footer: 1 )
+    }
     
     open func renderItem ( _ item: LayoutItem ) { }
     
