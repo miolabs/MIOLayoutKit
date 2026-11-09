@@ -27,6 +27,10 @@ public class HTMLRender: RenderContext {
     
 
     override open func renderItem ( _ item: LayoutItem ) {
+        if let table = item as? DataTable {
+            m_output.append( dataTableHTML( table ) )
+            return
+        }
         var styles: [String] = itemStyles( item )
 
         if let text = item as? Text {

@@ -12,6 +12,12 @@ public class TextRender: RenderContext {
     var lines: [String] = []
         
     override open func renderItem ( _ item: LayoutItem ) {
+        if let table = item as? DataTable {
+            let left = Int( table.absPosition( ).x )
+            let top = Int( table.absPosition( ).y )
+            for ( i, line ) in dataTableLines( table ).enumerated( ) { write( left, top + i, line ) }
+            return
+        }
         if let text = item as? Text {
             func pad ( _ length: Int ) -> String {
                 return String( repeating: " ", count: max( 0, length ) )
@@ -141,6 +147,10 @@ public class TextRender: RenderContext {
     
     
     override open func meassure ( _ item: LayoutItem ) -> Size {
+        if let table = item as? DataTable {
+            let lines = dataTableLines( table )
+            return Size( width: Float( lines.map { $0.count }.max( ) ?? 0 ), height: Float( lines.count ) )
+        }
         if let text = item as? Text {
             return Size( width: Float( text.text.count ), height: 1 )
         } else if let page = item as? Page {
