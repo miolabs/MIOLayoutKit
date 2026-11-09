@@ -69,7 +69,12 @@ public final class FileLayoutTemplateStore: LayoutTemplateStore {
     public func save ( _ descriptor: LayoutTemplateDescriptor, body: Data ) throws {
         // The body must at least parse as a template document.
         _ = try JSONDecoder().decode( LayoutTemplateDocument.self, from: body )
+        #if os(WASI)
+        // WASI has no temporary files, so no atomic write
+        try body.write( to: fileURL( key: descriptor.key, language: descriptor.language ) )
+        #else
         try body.write( to: fileURL( key: descriptor.key, language: descriptor.language ), options: .atomic )
+        #endif
     }
 
     public func load ( key: String, language: String? ) throws -> Data {
