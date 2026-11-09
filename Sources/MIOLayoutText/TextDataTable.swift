@@ -16,7 +16,7 @@ extension TextRender {
     public func dataTableLines ( _ table: DataTable ) -> [String] {
         let formatter = valueFormatter
         let columns = table.visibleColumns
-        let rows = table.visibleRows
+        let rows = table.rowsToDraw
 
         var body: [[String]] = []
         for row in rows {
@@ -27,7 +27,7 @@ extension TextRender {
             } )
         }
         let header = columns.map { localizedString( $0.title ) }
-        let footers: [[String]] = table.footers.map { footer in
+        let footers: [[String]] = table.footersToDraw.map { footer in
             let values = table.footerValues( footer )
             return columns.enumerated( ).map { ( i, c ) in
                 if i == 0, let label = footer.label, values[ c.key ] == nil { return localizedString( label ) }

@@ -114,6 +114,19 @@ public final class DataTable: LayoutItem {
     public var rowOrder: [Int]?
     public var footers: [DataFooter]
     public var showHeader: Bool
+    /// Text size of the cells (PDF): .m = 8 pt.
+    public var textSize: ItemSize = .m
+
+    // MARK: Page fragments (set by the pagination pass, see Layout.splitDataTables)
+
+    /// Positions in `visibleRows` this fragment draws; nil = all of them.
+    public var pageRows: Range<Int>?
+    /// Whether this fragment draws the footers (only the last fragment does).
+    public var showFooterRows: Bool = true
+    /// Height that fills the rest of the page, so the next fragment starts on a new page.
+    public var fillHeight: Float?
+    /// Column widths, measured once on the whole table and shared by its fragments.
+    public var columnWidths: [Float]?
 
     public init ( title: String? = nil
                 , columns: [DataColumn]
@@ -128,9 +141,55 @@ public final class DataTable: LayoutItem {
         super.init( )
     }
 
+    /// Pagination copies every item into its pages: keep the type, share the data source.
+    override public func shallowCopy ( ) -> LayoutItem {
+        let copy = DataTable( title: title, columns: columns, source: source, footers: footers, showHeader: showHeader )
+        copy.rowOrder = rowOrder
+        copy.textSize = textSize
+        copy.pageRows = pageRows
+        copy.showFooterRows = showFooterRows
+        copy.fillHeight = fillHeight
+        copy.columnWidths = columnWidths
+        copy.copyValues( self as LayoutItem )
+        return copy
+    }
+
+    override public func clone ( ) -> LayoutItem {
+        return shallowCopy( )
+    }
+
+    override public func meassure ( _ context: RenderContext ) {
+        super.meassure( context )
+        if let fill = fillHeight { size.height = fill }   // page fragment: fill the rest of the page
+    }
+
     public var visibleColumns: [DataColumn] { columns.filter { !$0.hidden } }
 
     public var visibleRows: [Int] { rowOrder ?? Array( 0..<source.rowCount ) }
+
+    /// The rows this table (or page fragment) draws, as source indexes.
+    public var rowsToDraw: ArraySlice<Int> {
+        let rows = visibleRows
+        guard let range = pageRows else { return rows[ ... ] }
+        return rows[ range.clamped( to: 0..<rows.count ) ]
+    }
+
+    /// The footers this table (or page fragment) draws.
+    public var footersToDraw: [DataFooter] { showFooterRows ? footers : [] }
+
+    /// A page fragment: same columns, source, order and totals; draws `rows` only.
+    public func fragment ( rows: Range<Int>, header: Bool, footers: Bool, fill: Float? ) -> DataTable {
+        let f = DataTable( title: nil, columns: columns, source: source, footers: self.footers, showHeader: header )
+        f.rowOrder = rowOrder
+        f.textSize = textSize
+        f.pageRows = rows
+        f.showFooterRows = footers
+        f.fillHeight = fill
+        f.columnWidths = columnWidths
+        f.flex = flex
+        f.style.copyValues( style )
+        return f
+    }
 
     /// Sum of each total column over the visible root rows (sub rows and rows excluded from
     /// totals do not add), as exact decimals.
@@ -230,4 +289,27 @@ public final class ColumnarRowsSource: DataTableSource {
     public func rowStyle ( row: Int ) -> DataRowStyle { rowStyles[ row ] ?? DataRowStyle( ) }
 
     public func cellStyle ( row: Int, column: String ) -> DataCellStyle? { cellStyles[ column ]?[ row ] }
+}
+
+/// Line heights of a DataTable in a renderer's units.
+public struct DataTableMetrics: Sendable, Equatable {
+    public var title: Float
+    public var header: Float
+    public var row: Float
+    public var footer: Float
+
+    public init ( title: Float, header: Float, row: Float, footer: Float ) {
+        self.title = title
+        self.header = header
+        self.row = row
+        self.footer = footer
+    }
+
+    /// Natural height of `table` (or a fragment of it).
+    public func height ( of table: DataTable ) -> Float {
+        ( table.title?.isEmpty == false ? title : 0 )
+        + ( table.showHeader ? header : 0 )
+        + Float( table.rowsToDraw.count ) * row
+        + Float( table.footersToDraw.count ) * footer
+    }
 }
