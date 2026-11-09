@@ -93,6 +93,62 @@ final class DataTableTests: XCTestCase {
 
     // MARK: - HTML
 
+    func test_html_divTableMarkup_rowsAndFooter() {
+        let r = HTMLRender()
+        r.localeIdentifier = "en_US"
+        let table = salesTable()
+        let rows = r.dataTableRowsHTML(table, range: 0..<table.visibleRows.count, markup: .divTable)
+        XCTAssertFalse(rows.contains("<tr") || rows.contains("<td"), rows)
+        XCTAssertTrue(rows.contains("<div class=\"tr sub\" data-row=\"1\"><div class=\"td align-left\" style=\"padding-left: 20px\">Water</div>"), rows)
+        // the row colour goes on every cell, as the web's .td.green
+        XCTAssertTrue(rows.contains("<div class=\"tr\" data-row=\"3\"><div class=\"td align-left green\">"), rows)
+        XCTAssertTrue(rows.contains("<div class=\"td align-right red\">-$5.00</div>"), rows)
+        XCTAssertTrue(rows.contains("<div class=\"td align-right zero\">$0.00</div>"), rows)
+
+        let footer = r.dataTableFooterRowsHTML(table, markup: .divTable)
+        XCTAssertTrue(footer.hasPrefix("<div class=\"tr footer\"><div class=\"td align-left\">TOTAL</div>"), footer)
+        XCTAssertTrue(footer.contains("<div class=\"td align-right\">$112.60</div></div>"), footer)
+        // default markup: the same rows as before
+        XCTAssertTrue(r.dataTableFooterRowsHTML(table).hasPrefix("<tr class=\"data-footer\"><td class=\"align-left\">TOTAL</td>"))
+    }
+
+    func test_reportValues_roundTiesUp_likeTheWeb() {
+        // 2193.725 is a tie: the web manager shows 2.193,73 € (half-up), not ,72 (half-even)
+        let f = ValueFormatter(locale: Locale(identifier: "es_ES"))
+        let plain = { (s: String) in s.replacingOccurrences(of: "\u{00a0}", with: " ") }
+        XCTAssertEqual(plain(f.string(Decimal(string: "2193.725")!, format: ValueFormat(.currency))), "2193,73 €")
+        XCTAssertEqual(plain(f.string(Decimal(string: "-509.925")!, format: ValueFormat(.currency))), "-509,93 €")
+        XCTAssertEqual(plain(f.string(Decimal(string: "6684.424")!, format: ValueFormat(.currency))), "6684,42 €")
+        // the layout formatters keep NumberFormatter's half-even (invoices unchanged)
+        let render = HTMLRender()
+        render.localeIdentifier = "en_US"
+        XCTAssertEqual(render.stringCurrency(from: Decimal(string: "2.125")!), "$2.12")
+    }
+
+    func test_html_footerZeroCells() {
+        let table = DataTable(columns: [DataColumn(key: "name", title: "N"),
+                                        DataColumn(key: "qty", title: "Q", format: ValueFormat(.integer), total: true)],
+                              source: DictionaryRowsSource(rows: [["name": "A", "qty": 0]]), footers: [.totals()])
+        let footer = HTMLRender().dataTableFooterRowsHTML(table, markup: .divTable)
+        XCTAssertTrue(footer.contains("<div class=\"td align-right zero\">0</div>"), footer)
+        XCTAssertTrue(footer.contains("<div class=\"td align-left\">TOTAL</div>"), footer)
+    }
+
+    func test_html_linkRows() {
+        // v1 rows with a segue, and a columnar row marked as a link
+        let dict = DictionaryRowsSource(rows: [["name": "A", "__segue_identifier__": "ShowReportViewController"], ["name": "B"]])
+        XCTAssertTrue(dict.rowStyle(row: 0).isLink)
+        XCTAssertFalse(dict.rowStyle(row: 1).isLink)
+        let table = DataTable(columns: [DataColumn(key: "name", title: "N")], source: dict)
+        let rows = HTMLRender().dataTableRowsHTML(table, range: 0..<2)
+        XCTAssertTrue(rows.contains("<tr class=\"data-row link\" data-row=\"0\">"), rows)
+        XCTAssertTrue(rows.contains("<tr class=\"data-row\" data-row=\"1\">"), rows)
+
+        let columnar = ColumnarRowsSource(rowCount: 1, columns: ["name": ["C"]], rowStyles: [0: DataRowStyle(isSubRow: true, isLink: true)])
+        let t2 = DataTable(columns: [DataColumn(key: "name", title: "N")], source: columnar)
+        XCTAssertTrue(HTMLRender().dataTableRowsHTML(t2, range: 0..<1).contains("class=\"data-row sub-row link\""))
+    }
+
     func test_html_structureFormattingAndEscaping() {
         let out = html(salesTable())
 
