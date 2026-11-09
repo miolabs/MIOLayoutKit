@@ -131,30 +131,36 @@ extension HTMLRender {
         var out = ""
         out.reserveCapacity( bounded.count * columns.count * 48 )
 
+        // Per column, the start of the cell tag: `<td class="align-right` (+ the markup's cell class)
+        let cellOpen = columns.map { c -> String in
+            "<\(markup.cellTag) class=\"" + ( markup.cellClass.isEmpty ? "" : markup.cellClass + " " ) + "align-\(alignName( c.align ))"
+        }
+        let cellClose = "</\(markup.cellTag)>"
+        let rowClose = "</\(markup.rowTag)>\n"
+
         for position in bounded {
             let row = rows[ position ]
             let style = table.source.rowStyle( row: row )
-            var rowClasses = [ markup.rowClass ]
-            if style.isSubRow { rowClasses.append( markup.subRowClass ) }
-            if style.isLink { rowClasses.append( markup.linkClass ) }
+            out += "<"; out += markup.rowTag; out += " class=\""; out += markup.rowClass
+            if style.isSubRow { out += " "; out += markup.subRowClass }
+            if style.isLink { out += " "; out += markup.linkClass }
             let rowColor = style.color.flatMap { isReportColor( $0 ) ? $0 : nil }
-            if let color = rowColor, !markup.rowColorsOnCells { rowClasses.append( "row-\(color)" ) }
-            out += "<\(markup.rowTag) class=\"\(rowClasses.joined( separator: " " ))\" data-row=\"\(row)\">"
+            if let color = rowColor, !markup.rowColorsOnCells { out += " row-"; out += color }
+            out += "\" data-row=\""; out += String( row ); out += "\">"
 
-            for c in columns {
-                let ( text, cellStyle ) = table.cellText( row: row, column: c, formatter: formatter )
-                var classes = markup.cellClass.isEmpty ? [] : [ markup.cellClass ]
-                classes.append( "align-\(alignName( c.align ))" )
-                if let color = rowColor, markup.rowColorsOnCells { classes.append( markup.cellColorPrefix + color ) }
-                if table.isZero( row: row, column: c ) { classes.append( "zero" ) }
-                if let color = cellStyle?.color, isReportColor( color ) { classes.append( markup.cellColorPrefix + color ) }
-                var attributes = "class=\"\(classes.joined( separator: " " ))\""
-                if let indent = cellStyle?.indentLevel, indent > 0 {
-                    attributes += " style=\"padding-left: \(indent * HTMLRender.dataTableIndentStep)px\""
+            for ( i, c ) in columns.enumerated( ) {
+                let cell = table.cell( row: row, column: c, formatter: formatter )
+                out += cellOpen[ i ]
+                if let color = rowColor, markup.rowColorsOnCells { out += " "; out += markup.cellColorPrefix; out += color }
+                if cell.isZero { out += " zero" }
+                if let color = cell.style?.color, isReportColor( color ) { out += " "; out += markup.cellColorPrefix; out += color }
+                out += "\""
+                if let indent = cell.style?.indentLevel, indent > 0 {
+                    out += " style=\"padding-left: "; out += String( indent * HTMLRender.dataTableIndentStep ); out += "px\""
                 }
-                out += "<\(markup.cellTag) \(attributes)>\(HTMLRender.escape( text ))</\(markup.cellTag)>"
+                out += ">"; out += HTMLRender.escape( cell.text ); out += cellClose
             }
-            out += "</\(markup.rowTag)>\n"
+            out += rowClose
         }
         return out
     }

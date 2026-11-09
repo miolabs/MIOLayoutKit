@@ -75,19 +75,22 @@ public class HTMLRender: RenderContext {
 
     /// Text and attribute values come from tenant data: never emit them as markup.
     public static func escape ( _ s: String ) -> String {
-        var out = ""
-        out.reserveCapacity( s.utf8.count )
-        for ch in s {
-            switch ch {
-            case "&":  out += "&amp;"
-            case "<":  out += "&lt;"
-            case ">":  out += "&gt;"
-            case "\"": out += "&quot;"
-            case "'":  out += "&#39;"
-            default:   out.append( ch )
+        // Most text has nothing to escape: return it as is (bytes, not Characters: much faster)
+        let utf8 = s.utf8
+        guard utf8.contains( where: { $0 == 0x26 || $0 == 0x3C || $0 == 0x3E || $0 == 0x22 || $0 == 0x27 } ) else { return s }
+        var out = [UInt8]( )
+        out.reserveCapacity( utf8.count + 16 )
+        for b in utf8 {
+            switch b {
+            case 0x26: out.append( contentsOf: "&amp;".utf8 )
+            case 0x3C: out.append( contentsOf: "&lt;".utf8 )
+            case 0x3E: out.append( contentsOf: "&gt;".utf8 )
+            case 0x22: out.append( contentsOf: "&quot;".utf8 )
+            case 0x27: out.append( contentsOf: "&#39;".utf8 )
+            default:   out.append( b )
             }
         }
-        return out
+        return String( decoding: out, as: UTF8.self )
     }
     
     override open func output() -> Data {

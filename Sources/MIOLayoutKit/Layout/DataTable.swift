@@ -227,6 +227,15 @@ public final class DataTable: LayoutItem {
         return ( formatter.string( value, format: style?.format ?? column.format ), style )
     }
 
+    /// Text, style and zero check of a cell with one lookup of each (renderers drawing many rows).
+    public func cell ( row: Int, column: DataColumn, formatter: ValueFormatter ) -> ( text: String, style: DataCellStyle?, isZero: Bool ) {
+        let style = source.cellStyle( row: row, column: column.key )
+        let format = style?.format ?? column.format
+        let value = source.value( row: row, column: column.key )
+        let zero = format.type.isNumeric && value.map { ValueFormatter.decimal( from: $0 ) == 0 } == true
+        return ( formatter.string( value, format: format ), style, zero )
+    }
+
     /// True for a numeric cell whose value is zero (the web greys those out).
     public func isZero ( row: Int, column: DataColumn ) -> Bool {
         let format = source.cellStyle( row: row, column: column.key )?.format ?? column.format

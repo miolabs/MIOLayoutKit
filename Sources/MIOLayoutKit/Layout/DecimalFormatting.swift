@@ -15,6 +15,8 @@ import Foundation
 
 package enum DecimalFormatting {
 
+    private static let half = Decimal( sign: .plus, exponent: -1, significand: 5 )
+
     /// Formats `value` like `formatter` would, keeping every digit of the Decimal.
     package static func string ( from value: Decimal, using formatter: NumberFormatter ) -> String {
         let maxFraction = max( 0, formatter.maximumFractionDigits )
@@ -26,15 +28,16 @@ package enum DecimalFormatting {
         }
 
         let negative = rounded < 0
-        let plain    = ( negative ? -rounded : rounded ).description      // "1234.5", "0.01", "12"
+        let magnitude = negative ? -rounded : rounded
+        let plain    = magnitude.description      // "1234.5", "0.01", "12"
         let parts    = plain.split( separator: ".", omittingEmptySubsequences: false )
-        let integer  = Decimal( string: String( parts[0] ) ) ?? 0
+        let integer  = round( magnitude, scale: 0, mode: .down )
 
         var fraction = parts.count > 1 ? String( parts[1] ) : ""
         while fraction.count > minFraction && fraction.hasSuffix( "0" ) { fraction.removeLast( ) }
         if fraction.count < minFraction { fraction += String( repeating: "0", count: minFraction - fraction.count ) }
 
-        let proxy  = ( integer + Decimal( string: "0.5" )! ) * ( negative ? -1 : 1 )
+        let proxy  = negative ? -( integer + half ) : integer + half
         let output = formatter.string( from: NSDecimalNumber( decimal: proxy ) ) ?? plain
 
         let separator = formatter.numberStyle == .currency
